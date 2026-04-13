@@ -37,6 +37,33 @@ For the first iteration of the algorithm, I think focusing on the important feat
 
 My recommender will compute a score for each song by computing a weighted combination of the chosen features. For example, genre will be weighted the heaviest since it usually reflects a strong and stable preference. Songs will be awarded score for matching genre, mood, and being close to numerical features like energy or tempo. 
 
+```mermaid
+flowchart TD
+    A[User Preferences\ngenre, mood, energy,\nacousticness, tempo_bpm,\nduration_sec, release_year, popularity]
+    B[Load songs from data/songs.csv]
+    C[For each song in the CSV]
+    D[Check categorical matches\nGenre exact match\nMood exact or close match]
+    E[Check numeric closeness\nenergy, acousticness, tempo_bpm,\nduration_sec, release_year, popularity]
+    F[Compute weighted song score]
+    G[Save song + score + explanation]
+    H[Repeat for all songs]
+    I[Sort songs by score\nhighest to lowest]
+    J[Take top K songs]
+    K[Output recommendations\nwith scores and explanations]
+
+    A --> C
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+
+```
+
 ---
 
 ## Getting Started
