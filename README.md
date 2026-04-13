@@ -29,6 +29,14 @@ Some prompts to answer:
 
 You can include a simple diagram or bullet list if helpful.
 
+According to my research, real life recommendation systems have several different layers. Spotify docs say its home recommendations use two stages: candidate generation and ranking. It first gets a list of plausible entities to recommend, then ranks those to serve the algorithm. The difference between collaborative filtering and content based filtering is how the algorithms learn and recommend. Collaboritive filtering checks to see what similar users to you are consuming and will recommend the same content to you. Content based filtering only considers the content itself, metadata about songs like genre, artist, or energy. 
+
+My version of the algorithm will prioritize content based filtering, since I won't have enough individual user data to implement collaborative filtering. 
+
+For the first iteration of the algorithm, I think focusing on the important features like genre, mood, energy, and acousticness will net the most results. The UserProfile will contain a lot of the same information it already does, like taste information (favorite genre, favorite mood, target energy, and acousticness). 
+
+My recommender will compute a score for each song by computing a weighted combination of the chosen features. For example, genre will be weighted the heaviest since it usually reflects a strong and stable preference. Songs will be awarded score for matching genre, mood, and being close to numerical features like energy or tempo. 
+
 ---
 
 ## Getting Started
