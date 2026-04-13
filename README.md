@@ -11,7 +11,7 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-Replace this paragraph with your own summary of what your version does.
+This project builds a small music recommender that scores songs from a hand made catalog based on a user's taste profile. The system uses content based filtering with features like genre, mood, energy, tempo, acousticness, duration, release year, and popularity to rank songs and explain why they were recommended. I also tested it with several normal and edge case listener profiles to see where the scoring logic works well and where it starts to break down.
 
 ---
 
@@ -66,6 +66,8 @@ flowchart TD
 
 Each song is represented with both category features and numeric features. The category features are `genre` and `mood`. The numeric features are `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`, `duration_sec`, `release_year`, and `popularity`.
 
+![alt text](image.png)
+
 
 ---
 
@@ -109,8 +111,13 @@ You can add more tests in `tests/test_recommender.py`.
 Use this section to document the experiments you ran. For example:
 
 - What happened when you changed the weight on genre from 2.0 to 0.5
+The algorithm gave less intentional results, though many were still similar. It had to guess a little more using the other features, if nothing else, it provided some decent variety in the recommendations while still being constrained to the user preferences. 
+
 - What happened when you added tempo or valence to the score
+Since tempo doesn't have a large weight, the recommendations still remained stable, with some swaps in the recommendation per user. It seems as though tempo is a background feature usful for refining rather than dominating the algorithm like genre does. 
+
 - How did your system behave for different types of users
+The system correctly recommended each of the distinct users I came up with. The High-Energy Pop user was given pop tracks, the Chill Lofi user was served slower, softer songs, and the Deep Intense Rock user was naturally given Storm Runner, the only rock song. 
 
 ---
 
@@ -126,6 +133,8 @@ Examples:
 
 You will go deeper on this in your model card.
 
+The biggest issue with the recommender is it's size and complexity. There's only so many features that it can pick from, and only so many songs it's able to recommend. The hard coded weights also make the recommender one dimensional. There's no learning aspect that can make the algorithm dynamic and personable. There's also currently not a great way to deal with contradictory profiles, it'll just average out the preferences without thinking any deeper about it. 
+
 ---
 
 ## Reflection
@@ -139,111 +148,9 @@ Write 1 to 2 paragraphs here about what you learned:
 - about how recommenders turn data into predictions
 - about where bias or unfairness could show up in systems like this
 
+This project helped me understand how recommenders turn data into predictions by reducing both songs and users into features that can be compared. Once the features are chosen, the recommender can score songs by looking for exact matches like genre or mood and then refining the result with numeric values like energy or tempo. Building it myself made the process feel much less magical. A recommendation is really the result of design choices about what data matters, how much each feature should count, and what kinds of matches the system should reward.
+
+It also made it easier to see where bias and unfairness can show up. My recommender only works on a tiny hand made dataset, so it is automatically biased toward the songs, genres, and moods I decided to include. Users with tastes outside that small catalog are going to get worse results. The scoring system can also favor some users more than others, especially when their taste fits neatly into the features I chose. If this were a real product, the quality and fairness of the recommendations would depend a lot on the size of the dataset, the kinds of users represented in it, and whether the model can handle more complex or contradictory taste patterns.
+
 
 ---
-
-## 7. `model_card_template.md`
-
-Combines reflection and model card framing from the Module 3 guidance. :contentReference[oaicite:2]{index=2}  
-
-```markdown
-# 🎧 Model Card - Music Recommender Simulation
-
-## 1. Model Name
-
-Give your recommender a name, for example:
-
-> VibeFinder 1.0
-
----
-
-## 2. Intended Use
-
-- What is this system trying to do
-- Who is it for
-
-Example:
-
-> This model suggests 3 to 5 songs from a small catalog based on a user's preferred genre, mood, and energy level. It is for classroom exploration only, not for real users.
-
----
-
-## 3. How It Works (Short Explanation)
-
-Describe your scoring logic in plain language.
-
-- What features of each song does it consider
-- What information about the user does it use
-- How does it turn those into a number
-
-Try to avoid code in this section, treat it like an explanation to a non programmer.
-
----
-
-## 4. Data
-
-Describe your dataset.
-
-- How many songs are in `data/songs.csv`
-- Did you add or remove any songs
-- What kinds of genres or moods are represented
-- Whose taste does this data mostly reflect
-
----
-
-## 5. Strengths
-
-Where does your recommender work well
-
-You can think about:
-- Situations where the top results "felt right"
-- Particular user profiles it served well
-- Simplicity or transparency benefits
-
----
-
-## 6. Limitations and Bias
-
-Where does your recommender struggle
-
-Some prompts:
-- Does it ignore some genres or moods
-- Does it treat all users as if they have the same taste shape
-- Is it biased toward high energy or one genre by default
-- How could this be unfair if used in a real product
-
----
-
-## 7. Evaluation
-
-How did you check your system
-
-Examples:
-- You tried multiple user profiles and wrote down whether the results matched your expectations
-- You compared your simulation to what a real app like Spotify or YouTube tends to recommend
-- You wrote tests for your scoring logic
-
-You do not need a numeric metric, but if you used one, explain what it measures.
-
----
-
-## 8. Future Work
-
-If you had more time, how would you improve this recommender
-
-Examples:
-
-- Add support for multiple users and "group vibe" recommendations
-- Balance diversity of songs instead of always picking the closest match
-- Use more features, like tempo ranges or lyric themes
-
----
-
-## 9. Personal Reflection
-
-A few sentences about what you learned:
-
-- What surprised you about how your system behaved
-- How did building this change how you think about real music recommenders
-- Where do you think human judgment still matters, even if the model seems "smart"
-
