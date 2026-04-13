@@ -64,6 +64,9 @@ flowchart TD
 
 ```
 
+Each song is represented with both category features and numeric features. The category features are `genre` and `mood`. The numeric features are `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`, `duration_sec`, `release_year`, and `popularity`.
+
+
 ---
 
 ## Getting Started
