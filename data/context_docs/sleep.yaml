@@ -1,0 +1,19 @@
+id: sleep
+keywords:
+  sleep: 2.2
+  bedtime: 1.8
+  calm: 1.5
+  peaceful: 1.5
+  soft: 1.2
+  quiet: 1.2
+summary: Soft, slow, low-energy music for winding down.
+target_energy_min: 0.10
+target_energy_max: 0.32
+target_tempo_min: 55
+target_tempo_max: 76
+target_acousticness_min: 0.80
+target_acousticness_max: 1.00
+mood_hints:
+  - serene
+  - chill
+  - relaxed

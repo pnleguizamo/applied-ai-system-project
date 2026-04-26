@@ -1,0 +1,20 @@
+id: workout
+keywords:
+  workout: 2.3
+  gym: 2.0
+  run: 1.7
+  running: 1.7
+  energetic: 1.5
+  upbeat: 1.4
+  intense: 1.3
+summary: High-energy, motivating music for exercise and movement.
+target_energy_min: 0.78
+target_energy_max: 0.98
+target_tempo_min: 120
+target_tempo_max: 170
+target_acousticness_min: 0.00
+target_acousticness_max: 0.25
+mood_hints:
+  - intense
+  - euphoric
+  - happy

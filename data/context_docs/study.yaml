@@ -1,0 +1,19 @@
+id: study
+keywords:
+  study: 2.0
+  studying: 2.0
+  homework: 1.8
+  library: 1.5
+  quiet: 1.4
+  read: 1.0
+summary: Low-distraction music for reading, homework, and long study blocks.
+target_energy_min: 0.25
+target_energy_max: 0.50
+target_tempo_min: 65
+target_tempo_max: 90
+target_acousticness_min: 0.65
+target_acousticness_max: 0.95
+mood_hints:
+  - focused
+  - chill
+  - serene

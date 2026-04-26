@@ -1,0 +1,21 @@
+id: party
+keywords:
+  party: 2.2
+  dance: 1.8
+  dancing: 1.8
+  club: 1.6
+  cookout: 1.5
+  fun: 1.0
+  upbeat: 1.0
+summary: Bright, social, danceable tracks for groups and celebrations.
+target_energy_min: 0.72
+target_energy_max: 0.95
+target_tempo_min: 96
+target_tempo_max: 132
+target_acousticness_min: 0.00
+target_acousticness_max: 0.35
+mood_hints:
+  - playful
+  - euphoric
+  - joyful
+  - happy

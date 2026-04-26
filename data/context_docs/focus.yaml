@@ -1,0 +1,19 @@
+id: focus
+keywords:
+  focus: 2.0
+  coding: 1.8
+  work: 1.5
+  deep: 1.0
+  flow: 1.2
+  concentrate: 1.8
+summary: Steady background tracks that support concentration without sharp changes.
+target_energy_min: 0.35
+target_energy_max: 0.55
+target_tempo_min: 72
+target_tempo_max: 96
+target_acousticness_min: 0.55
+target_acousticness_max: 0.88
+mood_hints:
+  - focused
+  - chill
+  - relaxed

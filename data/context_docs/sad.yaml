@@ -1,0 +1,19 @@
+id: sad
+keywords:
+  sad: 2.2
+  lonely: 1.7
+  heartbreak: 1.7
+  blue: 1.2
+  melancholy: 1.8
+  wistful: 1.5
+summary: Reflective music for sad, wistful, or emotionally heavy listening.
+target_energy_min: 0.25
+target_energy_max: 0.52
+target_tempo_min: 68
+target_tempo_max: 94
+target_acousticness_min: 0.58
+target_acousticness_max: 0.92
+mood_hints:
+  - wistful
+  - soulful
+  - moody

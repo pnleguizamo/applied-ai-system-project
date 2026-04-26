@@ -15,3 +15,6 @@ venv/
 
 # Pytest cache
 .pytest_cache/
+
+# App request logs
+logs/

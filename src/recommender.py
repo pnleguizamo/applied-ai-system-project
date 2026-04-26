@@ -12,6 +12,7 @@ NUMERIC_FLOAT_FIELDS = {
     "acousticness",
     "popularity",
 }
+NUMERIC_BOOL_FIELDS = {"explicit"}
 
 NUMERIC_SCORING_CONFIG = {
     "energy": (2.0, 1.0, "energy close to target"),
@@ -166,7 +167,7 @@ class Recommender:
 
 
 def load_songs(csv_path: str) -> List[Dict]:
-    """Load songs from a CSV file and parse numeric columns."""
+    """Load songs from a CSV file and parse typed columns."""
     songs: List[Dict] = []
 
     with open(csv_path, newline="", encoding="utf-8") as csv_file:
@@ -178,8 +179,12 @@ def load_songs(csv_path: str) -> List[Dict]:
                     parsed_row[key] = int(value)
                 elif key in NUMERIC_FLOAT_FIELDS:
                     parsed_row[key] = float(value)
+                elif key in NUMERIC_BOOL_FIELDS:
+                    parsed_row[key] = str(value).strip().lower() == "true"
                 else:
                     parsed_row[key] = value
+            for key in NUMERIC_BOOL_FIELDS:
+                parsed_row.setdefault(key, False)
             songs.append(parsed_row)
 
     return songs

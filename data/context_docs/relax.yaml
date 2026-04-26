@@ -1,0 +1,19 @@
+id: relax
+keywords:
+  relax: 2.0
+  relaxing: 2.0
+  unwind: 1.8
+  chill: 1.5
+  mellow: 1.3
+  calm: 1.2
+summary: Gentle music for decompressing without fully falling asleep.
+target_energy_min: 0.25
+target_energy_max: 0.45
+target_tempo_min: 70
+target_tempo_max: 92
+target_acousticness_min: 0.65
+target_acousticness_max: 0.95
+mood_hints:
+  - relaxed
+  - chill
+  - serene
