@@ -4,3 +4,4 @@ streamlit
 google-genai
 pydantic>=2
 pyyaml
+requests

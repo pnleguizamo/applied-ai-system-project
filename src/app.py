@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,7 +11,7 @@ from src.rag import load_context_docs
 from src.recommender import load_songs
 
 
-SONG_PATH = "data/songs.csv"
+SONG_PATH = os.environ.get("SONG_PATH", "data/songs.csv")
 CONTEXT_PATH = "data/context_docs"
 LOG_PATH = Path("logs/playlist_requests.jsonl")
 

@@ -26,6 +26,7 @@ except Exception:
 
 
 TOKEN_PATTERN = re.compile(r"[a-z0-9']+")
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_PROFILE = {
     "genre": "pop",
     "mood": "happy",
@@ -80,6 +81,21 @@ def _phrase_match(request_text: str, values: list[str]) -> Optional[str]:
     return None
 
 
+def _catalog_compatible_value(value: str, catalog_values: list[str]) -> tuple[str, Optional[str]]:
+    normalized = value.strip().lower()
+    if normalized in catalog_values:
+        return normalized, None
+
+    contained_value = _phrase_match(normalized, catalog_values)
+    if contained_value:
+        return contained_value, f"normalized unsupported value '{normalized}' to '{contained_value}'"
+
+    if catalog_values == ["unknown"]:
+        return "unknown", f"normalized unsupported value '{normalized}' to 'unknown'"
+
+    raise ValueError(f"unknown value: {normalized}")
+
+
 def _context_midpoint(contexts: List[Dict], prefix: str, default: float) -> float:
     weighted_total = 0.0
     weight_total = 0.0
@@ -122,12 +138,21 @@ def _normalize_profile_payload(
     catalog_genres = _catalog_values(songs, "genre")
     catalog_moods = _catalog_values(songs, "mood")
 
-    genre = str(payload.get("genre", "")).strip().lower()
-    mood = str(payload.get("mood", "")).strip().lower()
-    if genre not in catalog_genres:
-        raise ValueError(f"unknown genre: {genre}")
-    if mood not in catalog_moods:
-        raise ValueError(f"unknown mood: {mood}")
+    raw_genre = str(payload.get("genre", "")).strip().lower()
+    raw_mood = str(payload.get("mood", "")).strip().lower()
+    try:
+        genre, genre_warning = _catalog_compatible_value(raw_genre, catalog_genres)
+    except ValueError:
+        raise ValueError(f"unknown genre: {raw_genre}")
+    try:
+        mood, mood_warning = _catalog_compatible_value(raw_mood, catalog_moods)
+    except ValueError:
+        raise ValueError(f"unknown mood: {raw_mood}")
+
+    warnings = list(payload.get("warnings") or [])
+    for warning in (genre_warning, mood_warning):
+        if warning:
+            warnings.append(warning)
 
     profile = {
         "genre": genre,
@@ -140,7 +165,7 @@ def _normalize_profile_payload(
         "popularity": _clamp(payload.get("popularity", DEFAULT_PROFILE["popularity"]), 0.0, 1.0),
         "intent_summary": str(payload.get("intent_summary") or "Playlist request"),
         "tags": list(payload.get("tags") or []),
-        "warnings": list(payload.get("warnings") or []),
+        "warnings": warnings,
         "parser_tier": parser_tier,
         "parser_fallback_reason": fallback_reason,
         "model_name": model_name,
@@ -237,12 +262,27 @@ def _extract_response_payload(response: Any) -> Dict:
     raise ValueError("Gemini response did not contain a parseable profile")
 
 
-def _call_gemini(user_request: str, retrieved_contexts: List[Dict], model_client=None) -> tuple[Dict, str, int]:
-    model_name = "gemini-2.0-flash"
+def _gemini_model_name() -> str:
+    return os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+
+
+def _call_gemini(
+    user_request: str,
+    retrieved_contexts: List[Dict],
+    songs: List[Dict],
+    model_client=None,
+) -> tuple[Dict, str, int]:
+    model_name = _gemini_model_name()
     prompt = {
         "task": "Turn this listening request into a catalog-compatible music profile.",
         "request": user_request,
         "retrieved_contexts": retrieved_contexts,
+        "allowed_genres": _catalog_values(songs, "genre"),
+        "allowed_moods": _catalog_values(songs, "mood"),
+        "validation_rule": (
+            "Return genre and mood exactly as one of the allowed values. "
+            "If the only allowed value for a field is unknown, return unknown for that field."
+        ),
         "required_fields": list(DEFAULT_PROFILE.keys()) + ["intent_summary", "tags", "warnings"],
     }
     started = time.perf_counter()
@@ -288,7 +328,7 @@ def build_profile_from_request(
         return _fallback_profile(user_request, retrieved_contexts, songs, "missing GEMINI_API_KEY")
 
     try:
-        payload, model_name, latency_ms = _call_gemini(user_request, retrieved_contexts, model_client)
+        payload, model_name, latency_ms = _call_gemini(user_request, retrieved_contexts, songs, model_client)
         payload["latency_ms"] = latency_ms
         return _normalize_profile_payload(
             payload,

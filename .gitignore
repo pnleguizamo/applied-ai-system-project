@@ -18,3 +18,6 @@ venv/
 
 # App request logs
 logs/
+
+# Generated local catalogs
+data/generated/
