@@ -1,135 +1,114 @@
-# 🎧 Model Card: Music Recommender Simulation
+# Model Card: AI Playlist Copilot
 
-## 1. Model Name  
+## 1. Model Name
 
-Give your model a short, descriptive name.  
-Stracker  
+AI Playlist Copilot, built on the original Music Recommender Simulation.
 
----
+## 2. Intended Use
 
-## 2. Intended Use  
+The system recommends songs from a small local CSV catalog based on a user's listening request. It is intended for classroom exploration of recommender systems, RAG, structured profile generation, validation, and reliability communication.
 
-Describe what your recommender is designed to do and who it is for. 
+It is not intended for production music recommendation or real personalization. It does not learn from listening history, behavior, skips, likes, or collaborative signals.
 
-Prompts:  
+## 3. System Overview
 
-- What kind of recommendations does it generate  
-- What assumptions does it make about the user  
-- Is this for real users or classroom exploration  
+The system has two layers:
 
-The model recommends the top songs from data.csv that a specific user profile might want to listen to. 
+- Transparent recommender: `recommend_songs` ranks songs with weighted content-based scoring.
+- Copilot layer: natural-language requests are retrieved against local context docs, converted into a validated profile, planned into a playlist mode, audited, and displayed in Streamlit.
 
-It assumes the user can be reduced to a simple taste profile, a list of preferences that the recommender can use to score songs. 
+The scoring engine uses exact matches for genre and mood, plus numeric closeness for energy, acousticness, tempo, duration, release year, and popularity. The Copilot does not replace this scorer. It only creates the profile that the scorer consumes.
 
-This recommender is purely for classroom exploration, a real algorithm would need to be able to learn from data and work with a bigger dataset. 
+## 4. Data
 
----
+The catalog is `data/songs.csv`. It contains 18 songs with fields for title, artist, genre, mood, energy, tempo, valence, danceability, acousticness, duration, release year, popularity, and an `explicit` boolean.
 
-## 3. How the Model Works  
+The app can also run against a generated local CSV through `SONG_PATH`. Spotify-imported catalogs contain real catalog metadata, while recommender-specific fields such as genre, mood, energy, tempo, valence, danceability, and acousticness may be manually or Codex-assisted enriched. Those values are metadata inputs, not learned features, and the recommender does not distinguish hand-authored values from LLM-assisted edits.
 
-Explain your scoring approach in simple language.  
+The retrieval layer uses 8 local YAML context docs:
 
-Prompts:  
+- `study`
+- `focus`
+- `workout`
+- `party`
+- `sleep`
+- `sad`
+- `commute`
+- `relax`
 
-- What features of each song are used (genre, energy, mood, etc.)  
-- What user preferences are considered  
-- How does the model turn those into a score  
-- What changes did you make from the starter logic  
+Each context doc includes weighted keywords, a short summary, numeric target ranges, and mood hints.
 
-Avoid code here. Pretend you are explaining the idea to a friend who does not program.
+## 5. Profile Generation
 
-The model works by comparing songs in the dataset to user preferences given in a user taste profile. It looks at features of the song like genre, mood, energy, and acousticness. Songs are scored higher when they have matching features or the numeric features are close in value to the user's preference. Different features have different weights, so features like genre matter more than energy or tempo. Once each song has a score, the system ranks them and recommends the top songs to the user. 
+If `GEMINI_API_KEY` is set, the system attempts to use Gemini to produce a structured profile. Gemini output is validated against the current CSV catalog and numeric bounds. Unsupported genres, unsupported moods, invalid numerics, network errors, or timeouts trigger fallback.
 
----
+If Gemini is unavailable or invalid, the deterministic fallback parser:
 
-## 4. Data  
+- tokenizes the request
+- detects known genres, moods, and intents
+- blends retrieved context ranges into target values
+- clamps numeric values
+- warns on vague or contradictory requests
 
-Describe the dataset the model uses.  
+The final profile is scorer-compatible and includes fields such as `genre`, `mood`, `energy`, `tempo_bpm`, and `acousticness`.
 
-Prompts:  
+## 6. Strengths
 
-- How many songs are in the catalog  
-- What genres or moods are represented  
-- Did you add or remove data  
-- Are there parts of musical taste missing in the dataset  
+The system works best for requests that map clearly onto the small catalog or context docs, such as:
 
----
+- `upbeat workout music`
+- `quiet study music`
+- `calm sleep music`
+- `happy pop music`
 
-There are 18 songs in the catalog. It originally begain with 10, but I added 8 songs to introduce variety in genre and mood. Each song has categorical features like genre and mood plus numeric features like energy, tempo, and duration. The dataset has styles like pop, lofi, rock, jazz, classical, house, metal, and blues. Of course there are parts of musical taste missing in the dataset, I can't possibly represent all different musical tastes with a csv file, much less a csv file with 18 entries. 
+It is also transparent. Every recommendation keeps its score and reason strings, and the audit explains reliability warnings.
 
-## 5. Strengths  
+## 7. Limitations and Bias
 
-Where does your system seem to work well  
+The catalog is very small and hand-built, so it is biased toward included genres, moods, and artists. A user asking for music outside that catalog will receive approximate matches.
 
-Prompts:  
+The system does not understand lyrics, language, culture, artist background, production style, or personal listening history. It also cannot know whether a song is truly appropriate for a setting beyond the metadata provided.
 
-- User types for which it gives reasonable results  
-- Any patterns you think your scoring captures correctly  
-- Cases where the recommendations matched your intuition  
+The Gemini tier may interpret expressive requests better than the fallback parser, but it is still constrained by the local catalog. Validation prevents unsupported output from entering the scorer, but fallback recommendations can still be generic when the request is vague.
 
-The system works pretty well with the user profiles that I initially came up with that have well defined, consistent characteristics. The high energy pop and chill lofi profiles for example got served exactly the songs you would expect them to. When the data is nice and user listening isn't extraordinarily complex and multi faceted, the model works as intended. 
+## 8. Reliability Audit
 
----
+The audit confidence is heuristic, not statistical. It averages:
 
-## 6. Limitations and Bias 
+- top recommendation score strength
+- exact genre and mood availability in the filtered catalog
+- candidate pool size
 
-Where the system struggles or behaves unfairly. 
+It then lowers confidence for vague requests, contradictions, heavy explicit filtering, narrow score gaps, and recommendations that mainly match numeric features instead of genre or mood.
 
-Prompts:  
+This confidence should be read as a debugging and transparency aid, not a probability of user satisfaction.
 
-- Features it does not consider  
-- Genres or moods that are underrepresented  
-- Cases where the system overfits to one preference  
-- Ways the scoring might unintentionally favor some users  
+## 9. Evaluation
 
-The model is pretty severely limited. It only works with this tiny little csv dataset, so the recommendations are biased towards whatever is included. It focuses on reasonably measurable features, whether categorical or numerical, but steers clear of more complex features like lyrics, song structure, or musical choices made. It also struggles with contradictory profiles since the scoring system only adds points and never removes points, there's no sense of cancelling out contradictions. The scoring may unintentionally favor users with similar taste to the music in the dataset, since unfortunately users that don't like any of the music in the dataset are kind of cooked. 
+The automated tests cover:
 
----
+- original recommender behavior
+- CSV parsing and missing `explicit` backward compatibility
+- context retrieval
+- fallback profile generation
+- mocked Gemini invalid-output fallback
+- close match, variety, and arc playlist generation
+- audit confidence and warning behavior
 
-## 7. Evaluation  
+Manual evaluation should include:
 
-- Which user profiles you tested  
-- What you looked for in the recommendations  
-- What surprised you  
-- Any simple tests or comparisons you ran  
+- running `python3 -m src.main`
+- running `streamlit run src/app.py`
+- trying direct fallback prompts like `upbeat workout music`
+- trying indirect Gemini prompts like `drive home after a long day`
+- confirming request logs omit API keys
 
-I tested six profiles in `src/main.py`: High-Energy Pop, Chill Lofi, Deep Intense Rock, Conflicting Preferences, Unsupported Mood Edge Case, and Impossible Hybrid. I looked at the top songs, their scores, and the explanation reasons.
+## 10. Future Work
 
-The clearest results came from the realistic profiles. High-Energy Pop returned songs like `Sunrise City` and `Gym Hero`. Chill Lofi returned `Midnight Coding`, `Library Rain`, and `Focus Flow`. Deep Intense Rock returned `Storm Runner` first. That made sense because those songs matched the profile on genre, mood, and the main numeric features.
+Useful next steps would include a larger catalog, better genre and mood taxonomy, embeddings for retrieval, richer explicit/content metadata, user feedback loops, and playlist refinement across multiple turns.
 
-What surprised me most was how often `Gym Hero` showed up. It appeared even when the profile was not really asking for a workout song. This happened because the model adds points for partial matches. `Gym Hero` is very high-energy and close on tempo and popularity, so it keeps earning points.
+For production use, the biggest change would be replacing the tiny CSV with a representative dataset and evaluating recommendations against real user behavior instead of only handcrafted examples.
 
-The edge cases showed the limits of the system. Conflicting Preferences still returned mostly lofi songs because genre stayed strong even when the other features pulled in another direction. Unsupported Mood Edge Case showed that if no song matches the mood, the system falls back to genre and numeric similarity. Impossible Hybrid returned a mixed set of songs because no single song matched the whole profile.
+## 11. AI Collaboration Reflection
 
-I also compared profile pairs to see what changed. High-Energy Pop and Chill Lofi gave very different outputs because one profile wanted bright, fast songs and the other wanted slower, softer songs. High-Energy Pop and Deep Intense Rock overlapped more because both wanted high energy, which helps explain why `Gym Hero` kept showing up. Chill Lofi and Conflicting Preferences were useful too, because both leaned toward lofi, but the conflicting profile looked less clean since its preferences did not fit together well.
-
----
-
-## 8. Future Work  
-
-Ideas for how you would improve the model next.  
-
-Prompts:  
-
-- Additional features or preferences  
-- Better ways to explain recommendations  
-- Improving diversity among the top results  
-- Handling more complex user tastes  
-
-I'd add an actual learning model aka machine learning. I'd also want to wire it up to an API or some other data source instead of a csv so the recommender has real variety to choose from. To increase diversity, it might make sense to choose a random subset of the dataset to run the model on, that way recommendations will change from run to run. I think pivoting to a machine learning model would also allow the system to handle more complex user tastes. As long as we can embed features, we can throw complex song data at the model and have it spit out recommendations.
-
----
-
-## 9. Personal Reflection  
-
-A few sentences about your experience.  
-
-Prompts:  
-
-- What you learned about recommender systems  
-- Something unexpected or interesting you discovered  
-- How this changed the way you think about music recommendation apps  
-
-I learned a lot about real world recommender systems and all their different phases. It was interesting translating that into a simpler system to actually implement. I didn't realize how much actually went into the recommendation system and that they even use other people's profiles and data to recommend things to you. This made me excited about music recommendation, I'm looking forward to exploring this project and seeing what I can do to elevate the project to a real recommendation algorithm.
-
-My biggest learning moment during this project was learning about the infrastructure and resources necessary to actually launch a successful recommender system. It all starts with a real, substantial dataset rather than a play csv. Using AI tools during this project was exceptionally productive, though there were some cases when AI would leave behind legacy code and rack up technical debt since it was so focuesed on moving forward and iterating. I was surprised with how effective this simple algorithm was though, with the right features and the right preferences, distinct users can get strong, personalized recommendations simply by matching and comparing values.
+AI assistance was useful for turning the assignment into a multi-module system, but the important engineering guardrail was keeping the original recommender as the single source of truth. That made the new AI-facing layers easier to test and easier to explain.

@@ -1,156 +1,228 @@
-# 🎵 Music Recommender Simulation
+# AI Playlist Copilot
 
-## Project Summary
+## Original Project: Music Recommender Simulation
 
-In this project you will build and explain a small music recommender system.
+My original Modules 1-3 project was a small CSV-backed Music Recommender Simulation. Songs are represented as structured rows in `data/songs.csv`, and the recommender ranks them with transparent weighted scoring over genre, mood, energy, acousticness, tempo, duration, release year, and popularity.
 
-Your goal is to:
+The original goal was to make song recommendations explainable instead of hiding the ranking behind a black box. It could load a local song catalog, score each song against a user profile, return ranked recommendations, and explain the strongest matching features.
 
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
+The original public API remains compatible:
 
-This project builds a small music recommender that scores songs from a hand made catalog based on a user's taste profile. The system uses content based filtering with features like genre, mood, energy, tempo, acousticness, duration, release year, and popularity to rank songs and explain why they were recommended. I also tested it with several normal and edge case listener profiles to see where the scoring logic works well and where it starts to break down.
+- `Song`
+- `UserProfile`
+- `Recommender`
+- `load_songs`
+- `score_song`
+- `recommend_songs`
 
----
+## Title and Summary
 
-## How The System Works
+AI Playlist Copilot extends the original recommender into a natural-language playlist tool. It turns a listening request into a playlist by retrieving intent context, building a validated music profile, ranking songs with the original deterministic recommender, auditing reliability, and optionally displaying the result in Streamlit.
 
-Explain your design in plain language.
+This matters because music requests are often vague, emotional, or situational, and the system shows how AI can translate that messy language into transparent, testable recommendation logic.
 
-Some prompts to answer:
+## Architecture Overview
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
-
-You can include a simple diagram or bullet list if helpful.
-
-According to my research, real life recommendation systems have several different layers. Spotify docs say its home recommendations use two stages: candidate generation and ranking. It first gets a list of plausible entities to recommend, then ranks those to serve the algorithm. The difference between collaborative filtering and content based filtering is how the algorithms learn and recommend. Collaboritive filtering checks to see what similar users to you are consuming and will recommend the same content to you. Content based filtering only considers the content itself, metadata about songs like genre, artist, or energy. 
-
-My version of the algorithm will prioritize content based filtering, since I won't have enough individual user data to implement collaborative filtering. 
-
-For the first iteration of the algorithm, I think focusing on the important features like genre, mood, energy, and acousticness will net the most results. The UserProfile will contain a lot of the same information it already does, like taste information (favorite genre, favorite mood, target energy, and acousticness). 
-
-My recommender will compute a score for each song by computing a weighted combination of the chosen features. For example, genre will be weighted the heaviest since it usually reflects a strong and stable preference. Songs will be awarded score for matching genre, mood, and being close to numerical features like energy or tempo. 
+The original recommender is still the ranking engine. New modules shape the input profile, retrieve context, inspect the output, and make reliability visible:
 
 ```mermaid
 flowchart TD
-    A[User Preferences\ngenre, mood, energy,\nacousticness, tempo_bpm,\nduration_sec, release_year, popularity]
-    B[Load songs from data/songs.csv]
-    C[For each song in the CSV]
-    D[Check categorical matches\nGenre exact match\nMood exact or close match]
-    E[Check numeric closeness\nenergy, acousticness, tempo_bpm,\nduration_sec, release_year, popularity]
-    F[Compute weighted song score]
-    G[Save song + score + explanation]
-    H[Repeat for all songs]
-    I[Sort songs by score\nhighest to lowest]
-    J[Take top K songs]
-    K[Output recommendations\nwith scores and explanations]
+    U[Human listener] --> UI[Streamlit app]
+    UI --> REQ[Natural-language request and playlist settings]
 
-    A --> C
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    F --> G
-    G --> H
-    H --> I
-    I --> J
-    J --> K
+    SONGS[(Song catalog CSV)] --> FILTER[Explicit filter]
+    CTX[(YAML context docs)] --> RAG[RAG context retriever]
+    REQ --> RAG
+    REQ --> PROF[Profile builder]
+    RAG --> PROF
 
+    PROF --> GEMINI{Gemini available?}
+    GEMINI -->|yes| GEM[Gemini structured parser]
+    GEMINI -->|no| FALLBACK[Deterministic fallback parser]
+    GEM --> CHECK{Parser output valid?}
+    CHECK -->|yes| VALIDATE[Validate catalog values and clamp ranges]
+    CHECK -->|no| FALLBACK
+    FALLBACK --> VALIDATE
+
+    FILTER --> REC[Deterministic recommender]
+    VALIDATE --> REC
+    REC --> MODE[Playlist mode selector]
+    MODE --> AUDIT[Reliability audit and warnings]
+    AUDIT --> OUT[Playlist, explanations, confidence]
+    OUT --> UI
+    AUDIT --> LOG[(JSONL request log)]
+
+    TESTS[pytest suite] -. checks .-> RAG
+    TESTS -. checks .-> PROF
+    TESTS -. checks .-> REC
+    TESTS -. checks .-> AUDIT
+    U -. reviews .-> OUT
 ```
 
-Each song is represented with both category features and numeric features. The category features are `genre` and `mood`. The numeric features are `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`, `duration_sec`, `release_year`, and `popularity`.
+Context retrieval is deterministic. The YAML files in `data/context_docs/` describe intents such as `study`, `workout`, `sleep`, and `commute`, each with weighted keywords and target ranges for energy, tempo, and acousticness.
 
-![alt text](image.png)
+Profile generation has two tiers:
 
+- Gemini tier: if `GEMINI_API_KEY` is set, the app asks Gemini to produce a structured profile. The output is still validated against the local catalog and numeric ranges.
+- Fallback tier: if Gemini is unavailable, times out, or returns unsupported values, a closed-vocabulary parser uses catalog genres, catalog moods, retrieved contexts, and simple contradiction checks.
 
----
+Playlist generation supports three modes:
 
-## Getting Started
+- `close_match`: straight deterministic ranking.
+- `variety`: keeps high-scoring songs but favors different artist/genre pairs among near ties.
+- `arc`: creates warmup, middle, and peak stage profiles and prevents duplicate songs across stages.
 
-### Setup
+## Loom Walkthrough Video
+https://www.loom.com/share/d9325c6a6b434b64817a2eac28edffc6
 
-1. Create a virtual environment (optional but recommended):
+## Setup Instructions
 
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
-   .venv\Scripts\activate         # Windows
+Create and activate a virtual environment if desired:
 
-2. Install dependencies
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the app:
+Run the original command-line recommender:
 
 ```bash
-python -m src.main
+python3 -m src.main
 ```
 
-### Running Tests
-
-Run the starter tests with:
+Run the Streamlit Copilot:
 
 ```bash
-pytest
+python3 -m streamlit run src/app.py --server.headless true --server.port 8501
 ```
 
-You can add more tests in `tests/test_recommender.py`.
+or 
 
----
+```bash
+streamlit run src/app.py
+```
 
-## Experiments You Tried
+Optional Gemini mode:
 
-Use this section to document the experiments you ran. For example:
+```bash
+export GEMINI_API_KEY="your-key"
+streamlit run src/app.py
+```
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-The algorithm gave less intentional results, though many were still similar. It had to guess a little more using the other features, if nothing else, it provided some decent variety in the recommendations while still being constrained to the user preferences. 
+By default, Gemini mode uses `gemini-2.5-flash-lite`. If your Google AI Studio rate-limit page shows zero quota for that model, set `GEMINI_MODEL` to a text-out model with nonzero quota in your project:
 
-- What happened when you added tempo or valence to the score
-Since tempo doesn't have a large weight, the recommendations still remained stable, with some swaps in the recommendation per user. It seems as though tempo is a background feature usful for refining rather than dominating the algorithm like genre does. 
+```bash
+export GEMINI_MODEL="gemini-2.5-flash"
+streamlit run src/app.py
+```
 
-- How did your system behave for different types of users
-The system correctly recommended each of the distinct users I came up with. The High-Energy Pop user was given pop tracks, the Chill Lofi user was served slower, softer songs, and the Deep Intense Rock user was naturally given Storm Runner, the only rock song. 
+Without `GEMINI_API_KEY`, or if the Gemini request fails, the app uses the deterministic fallback parser.
 
----
+### Optional: Importing A Real Catalog
 
-## Limitations and Risks
+The app defaults to the committed demo catalog at `data/songs.csv`. To build a larger local catalog from a public Spotify playlist, set Spotify client-credentials env vars and run the importer:
 
-Summarize some limitations of your recommender.
+```bash
+export SPOTIFY_CLIENT_ID="your-client-id"
+export SPOTIFY_CLIENT_SECRET="your-client-secret"
 
-Examples:
+python3 -m src.catalog_import \
+  --spotify-playlist-id PLAYLIST_ID \
+  --output data/generated/songs.spotify.csv
+```
 
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
+Generated catalogs live under `data/generated/`, which is ignored by git. Spotify provides catalog metadata only: title, artist, album, duration, release year, popularity, explicit flag, Spotify IDs/URLs, ISRC, and artist-level genre labels. The importer stores raw Spotify artist genre labels in `artist_genres` and maps them into a broader recommender `genre` when possible. Other recommender-specific traits start with neutral defaults: `mood=unknown`, `energy=0.5`, `tempo_bpm=120`, `valence=0.5`, `danceability=0.5`, and `acousticness=0.5`.
 
-You will go deeper on this in your model card.
+After import, manually enrich `data/generated/songs.spotify.csv` with Codex or by hand. A reusable local prompt is available at `data/generated/codex_enrich_prompt.md`. Review `genre`, fill `mood`, `energy`, `tempo_bpm`, `valence`, `danceability`, and `acousticness`, then set `metadata_source` to `spotify+codex`. Use the existing `data/songs.csv` vocabulary as a consistency guide for genre and mood, and keep numeric values in the same ranges used by the demo catalog.
 
-The biggest issue with the recommender is it's size and complexity. There's only so many features that it can pick from, and only so many songs it's able to recommend. The hard coded weights also make the recommender one dimensional. There's no learning aspect that can make the algorithm dynamic and personable. There's also currently not a great way to deal with contradictory profiles, it'll just average out the preferences without thinking any deeper about it. 
+Launch Streamlit with the generated catalog:
 
----
+```bash
+SONG_PATH=data/generated/songs.spotify.csv python3 -m streamlit run src/app.py --server.headless true --server.port 8501
+```
+
+## Sample Interactions
+
+Gemini can help with more indirect requests:
+
+- `drive home after a long day`
+- `music my dad would've played at a 1985 cookout`
+- `start calm and build into a workout playlist`
+
+The fallback parser handles direct catalog and intent requests:
+
+- `upbeat workout music`
+- `quiet study music`
+- `calm sleep music`
+- `lofi workout`
+
+### Examples
+
+Example 1
+![alt text](assets/image-1.png)
+![alt text](assets/image-2.png)
+![alt text](assets/image-3.png)
+
+Example 2
+![alt text](assets/image-4.png)
+
+Example 3
+![alt text](assets/image-5.png)
+
+
+## Design Decisions
+
+I kept the original deterministic recommender as the ranking engine so the final scores stay explainable and testable. The AI layer interprets the user request, but it does not directly choose songs or silently change the scoring rules.
+
+The Gemini tier is optional and validated. If `GEMINI_API_KEY` is set, the app asks Gemini to produce a structured profile, but the output still has to use catalog-supported genres and moods and stay inside numeric ranges. If Gemini is unavailable, times out, or returns unsupported values, the deterministic fallback parser takes over.
+
+The Streamlit app appends one JSONL record per request to `logs/playlist_requests.jsonl`. Logged fields include timestamp, request text, parser tier, fallback reason, retrieved context IDs, profile, recommendation IDs, confidence, and warnings.
+
+The default catalog is tiny, hand-authored, and not representative of real listening taste. Imported Spotify catalogs can add real songs, but their recommender feature values still depend on manual or Codex-assisted enrichment. Users whose preferences are outside the CSV will get weaker recommendations. The system does not understand lyrics, culture, artist identity, user history, or long-term taste.
+
+## Testing Summary
+
+Run all tests:
+
+```bash
+python3 -m pytest tests/
+```
+
+The suite covers:
+
+- original recommender compatibility
+- CSV `explicit` parsing and backward compatibility
+- RAG retrieval
+- fallback profile generation
+- Gemini validation fallback through a mocked client
+- close match, variety, and arc playlist modes
+- audit warnings and confidence behavior
+- Spotify playlist import with mocked HTTP calls
+
+In terms of what worked and what didn't during implementation, I initially tried to integrate both the spotify and deezer apis to retrieve rich track metadata, but then I realized that neither apis really contained the specific metadata that I needed for the recommender (like acousticness, energy, mood). So I resulted just using the spotify api to grab the songs I wanted to use and enriching them with metadata manually. 
+
+Also, initially, the gemini integration didn't work since the default model wasn't actually included in the free tier of the api. This was a simple fix, I just added the ability to choose the model programmatically.
 
 ## Reflection
 
-Read and complete `model_card.md`:
+The main lesson from this project is how different it is to work with AI on small scale features vs larger scale projects. Though this still isn't a huge scale project, it was big enough to the point that some agents lost important context when working on different portions of the project. It was up to me to have a truly solid plan of implementation and orchestrate the agents to accomplish the vision of the project I had. 
 
-[**Model Card**](model_card.md)
+Of course it's still important to do my own research and always validate the outputs of the AI tools. Like usual, sometimes I would get complete junk from the AI that I would have to revert or refactor to fit the actual use case of the project. 
 
-Write 1 to 2 paragraphs here about what you learned:
+The creativity piece was also an important lesson. Agents and AI are pretty great at implementing and choosing tools and wiring things together, but they're pretty awful at taking creative liberty to create something real and useful and choosing to incorporate new features. It was up to me to architect the features that make the project actually interesting, like the context retrieval, the gemini integration to create profiles from natural language, and the spotify integration. 
 
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+### Reflection Extended and Ethics
 
-This project helped me understand how recommenders turn data into predictions by reducing both songs and users into features that can be compared. Once the features are chosen, the recommender can score songs by looking for exact matches like genre or mood and then refining the result with numeric values like energy or tempo. Building it myself made the process feel much less magical. A recommendation is really the result of design choices about what data matters, how much each feature should count, and what kinds of matches the system should reward.
+The biggest limitation of my system is that it's only as good as the songs and metadata I give it. The default catalog is pretty small, and even when I import songs from Spotify, I still have to manually enrich a lot of the values like mood, energy, acousticness, valence, and danceability. Because of that, the recommendations can definitely reflect my own assumptions about how songs should be labeled, and it might not work as well for genres or listening preferences that are not represented well in the CSV.
 
-It also made it easier to see where bias and unfairness can show up. My recommender only works on a tiny hand made dataset, so it is automatically biased toward the songs, genres, and moods I decided to include. Users with tastes outside that small catalog are going to get worse results. The scoring system can also favor some users more than others, especially when their taste fits neatly into the features I chose. If this were a real product, the quality and fairness of the recommendations would depend a lot on the size of the dataset, the kinds of users represented in it, and whether the model can handle more complex or contradictory taste patterns.
+This AI could also be misused if someone used it to make playlists that ignore what the user actually asked for, like giving explicit songs when clean music was requested, or acting too confident when the playlist is not actually that good. I tried to prevent that by adding the explicit filter, validating Gemini's output, falling back to the deterministic parser when needed, and showing confidence scores and warnings.
 
+What surprised me while testing reliability was that the fallback parser was sometimes more reliable than Gemini for simple requests. Gemini was better for vague prompts like "drive home after a long day," but it would sometimes return genres or moods that my catalog didn't support. So the validation and fallback logic ended up being way more important than I expected.
 
----
+My collaboration with AI was helpful overall, but I still had to check a lot of what it gave me. One helpful suggestion was creating a structured profile between the natural language request and the recommender, since that made the AI output easier to validate and test. One flawed suggestion was relying on Spotify or Deezer to provide things like mood, energy, and acousticness. Those APIs didn't actually give me the exact data I needed, so I ended up using Spotify mainly for song information and then enriching the recommender metadata myself with some help from Codex.

@@ -20,4 +20,4 @@ venv/
 logs/
 
 # Generated local catalogs
-data/generated/
+# data/generated/
